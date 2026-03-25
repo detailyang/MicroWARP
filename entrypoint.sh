@@ -34,8 +34,21 @@ if [ ! -f "$WG_CONF" ]; then
         *) echo "==> [ERROR] 不支持的架构: $ARCH"; exit 1 ;;
     esac
 
-    WGCF_VER=$(curl -sL https://api.github.com/repos/ViRb3/wgcf/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
-    echo "==> [MicroWARP] 检测到最新 wgcf 版本: v${WGCF_VER}"
+    # 优先使用环境变量指定的版本，避免 API 请求
+    if [ -n "${WGCF_VERSION:-}" ]; then
+        WGCF_VER="$WGCF_VERSION"
+        echo "==> [MicroWARP] 使用环境变量指定的 wgcf 版本: v${WGCF_VER}"
+    else
+        # 构建 GitHub API URL，支持 GH_PROXY 代理
+        if [ -n "${GH_PROXY:-}" ]; then
+            API_URL="${GH_PROXY%/}/https://api.github.com/repos/ViRb3/wgcf/releases/latest"
+        else
+            API_URL="https://api.github.com/repos/ViRb3/wgcf/releases/latest"
+        fi
+
+        WGCF_VER=$(curl -sL "$API_URL" | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+        echo "==> [MicroWARP] 检测到最新 wgcf 版本: v${WGCF_VER}"
+    fi
     wget --timeout=15 -qO wgcf "$(build_wgcf_download_url "$WGCF_VER" "$WGCF_ARCH")"
     chmod +x wgcf
 
